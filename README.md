@@ -10,6 +10,8 @@ To run this script, please clone the directory and run the scraper with the foll
 ```python doge-scrape.py```
 
 ### Dependencies
-- pandas
 - bs4
+- numpy
+- pandas
+- validators
 - tqdm
