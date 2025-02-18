@@ -1,3 +1,5 @@
+import numpy as np
+import os
 import pandas as pd
 import requests as req
 import validators
@@ -26,6 +28,14 @@ data_key_dict = { # match on the 'id' field
     'principal_naics_code': 'principalNAICSCode',
     'principal_naics_desc': 'NAICSCodeDescription',
 }
+
+def safe_load_csv(filepath):
+    return pd.read_csv(filepath) if os.path.exists(filepath) else pd.DataFrame([])
+
+def load_pre_data():
+    pre_contract_df = safe_load_csv('./data/doge-contract.csv')
+    pre_property_df = safe_load_csv('./data/doge-property.csv')
+    return pre_contract_df, pre_property_df
 
 def scrape_doge():
     doge_data_url = 'https://doge.gov/api/receipts/overview'
@@ -71,10 +81,19 @@ def save_doge_data(contract_df,property_df):
     contract_df.to_csv(f'./data/doge-contract.csv',index=False)
     property_df.to_csv(f'./data/doge-property.csv',index=False)
 
-def main():
+def update_doge_data():
+    pre_contract_df, pre_property_df = load_pre_data()
     contract_df, property_df = scrape_doge()
-    contract_df = extend_contract_data(contract_df)
-    property_df = process_prop_data(property_df)
+    new_contract_df = pd.concat([pre_contract_df,contract_df])[contract_df.columns].drop_duplicates(keep=False)
+    new_property_df = pd.concat([pre_property_df,property_df])[property_df.columns].drop_duplicates(keep=False)
+    new_contract_df = extend_contract_data(new_contract_df)
+    new_property_df = process_prop_data(new_property_df)
+    contract_df = pd.concat([pre_contract_df,new_contract_df])
+    property_df = pd.concat([pre_property_df,new_property_df])
+    return contract_df, property_df
+
+def main():
+    contract_df, property_df = update_doge_data()
     save_doge_data(contract_df,property_df)
 
 if __name__ == '__main__':
