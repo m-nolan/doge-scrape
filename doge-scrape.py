@@ -9,6 +9,17 @@ from datetime import datetime
 from tqdm import tqdm
 
 data_key_dict = { # match on the 'id' field
+    'date_signed': 'signedDate',
+    'date_effective': 'effectiveDate',
+    'date_complete': 'awardCompletionDate',
+    'date_ult_complete_est': 'estimatedUltimateCompletionDate',
+    'date_solicitation': 'solicitationDate',
+    'amount_obligated': 'obligatedAmount',
+    'amount_obligated_total': 'totalObligatedAmount',
+    'amount_base_exercised_options': 'baseAndExercisedOptionsValue',
+    'amount_base_exercised_options_total': 'totalBaseAndExercisedOptionsValue',
+    'amount_ultimate': 'ultimateContractValue',
+    'amount_ultimate_total': 'totalUltimateContractValue',
     'entity_id': 'UEINumber',
     'entity_name': 'vendorName',
     'entity_dba': 'vendorDoingAsBusinessName',
@@ -48,8 +59,11 @@ def scrape_doge():
 def parse_fpds_html(fpds_soup):
     data_dict = {}
     for k, qk in data_key_dict.items():
-        data_dict[k] = fpds_soup.find('input',id=qk).get('value',default=None)
-    data_dict['Description of Requirement'] = fpds_soup.find('textarea'
+        element = fpds_soup.find('input',id=qk)
+        data_dict[k] = element.get('value',default=None) if element is not None else None
+        if 'amount' in k and data_dict[k] is not None:
+            data_dict[k] = float(str(data_dict[k]).replace('$','').replace(',',''))
+    data_dict['requirement_desc'] = fpds_soup.find('textarea'
         ,id='descriptionOfContractRequirement').get('text',default=None)
     return data_dict
 
@@ -74,6 +88,7 @@ def clean_loc_str(loc):
 
 def process_prop_data(property_df):
     property_df['city'], property_df['state'] = zip(*[clean_loc_str(loc) for loc in property_df['location']])
+    property_df['sqft'] = [float(str(a).replace(',','')) if a is not None else None for a in property_df['sq_ft']]
     return property_df
 
 def save_doge_data(contract_df,property_df):
