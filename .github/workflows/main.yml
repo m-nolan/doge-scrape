@@ -18,7 +18,7 @@ jobs:
     - name: check-out repo
       uses: actions/checkout@v4
       with:
-        fetch-dpth: 0
+        fetch-depth: 0
 
     # Step 2: install python and required packages
     - name: install reqs
@@ -27,7 +27,7 @@ jobs:
     # Step 3: run DOGE scraper
     - name: scrape DOGE
       run: python doge-scrape.py
-      
+
     # Step 4: commit data changes, push to github
     - name: commit and push
       run: |
