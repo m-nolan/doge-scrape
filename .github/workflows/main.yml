@@ -1,0 +1,41 @@
+# name: Scrape DOGE data
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 10 * * 1-5'  # 6AM ET, M-F
+  
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+
+    # Step 1: check-out repo
+    - name: check-out repo
+      uses: actions/checkout@v4
+      with:
+        fetch-dpth: 0
+
+    # Step 2: install python and required packages
+    - name: install reqs
+      run: pip install -r requirements.txt
+
+    # Step 3: run DOGE scraper
+    - name: scrape DOGE
+      run: python doge-scrape.py
+      
+    # Step 4: commit data changes, push to github
+    - name: commit and push
+      run: |
+        git config remote.origin.url https://github.com/m-nolan/sunlight_fec.git
+        git config --global user.name "$(git --no-pager log --format=format:'%an' -n 1)"
+        git config --global user.email "$(git --no-pager log --format=format:'%ae' -n 1)"
+        git add data/*.csv
+        git commit -m "Automated commit from DOGE scraper gvia GitHub Actions" || exit 0
+        git pull
+        git push
+    
