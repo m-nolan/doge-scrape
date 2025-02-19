@@ -9,6 +9,12 @@ from datetime import datetime
 from tqdm import tqdm
 
 data_key_dict = { # match on the 'id' field
+    'award_agency': 'agencyID',
+    'award_procurement_id': 'PIID',
+    'award_modification_num': 'modNumber',
+    'ref_idv_agency': 'idvAgencyID',
+    'ref_idv_procurement_id': 'idvPIID',
+    'ref_idv_modification_num': 'idvModNumber',
     'date_signed': 'signedDate',
     'date_effective': 'effectiveDate',
     'date_complete': 'awardCompletionDate',
@@ -88,7 +94,7 @@ def clean_loc_str(loc):
 
 def process_prop_data(property_df):
     property_df['city'], property_df['state'] = zip(*[clean_loc_str(loc) for loc in property_df['location']])
-    property_df['sqft'] = [float(str(a).replace(',','')) if a is not None else None for a in property_df['sq_ft']]
+    property_df['sq_ft'] = [float(str(a).replace(',','')) if a is not None else None for a in property_df['sq_ft']]
     return property_df
 
 def save_doge_data(contract_df,property_df):
