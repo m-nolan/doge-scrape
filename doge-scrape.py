@@ -57,8 +57,6 @@ def load_pre_data():
 def scrape_doge():
     doge_data_url = 'https://doge.gov/api/receipts/overview'
     r = req.get(doge_data_url)
-    print(r)
-    print(r.content)
     data_json = r.json()
     contract_df = pd.DataFrame(data_json['contracts'])
     property_df = pd.DataFrame(data_json['leases'])
