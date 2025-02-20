@@ -83,7 +83,7 @@ def extend_contract_data(contract_df):
             data_dict_list.append(parse_fpds_html(BeautifulSoup(r.content)))
         else:
             data_dict_list.append({k: None for k, _ in data_key_dict.items()})
-    return pd.concat([contract_df,pd.DataFrame(data_dict_list)],axis=1)
+    return pd.concat([contract_df.reset_index().drop('index',axis=1),pd.DataFrame(data_dict_list)],axis=1)
 
 def clean_loc_str(loc):
     if ', ' in loc:
@@ -103,12 +103,15 @@ def save_doge_data(contract_df,property_df):
     property_df.to_csv(f'./data/doge-property.csv',index=False)
 
 def update_doge_data():
+    datetime_scrape = datetime.strftime(datetime.now(),'%Y-%m-%d-%H%M')
     pre_contract_df, pre_property_df = load_pre_data()
     contract_df, property_df = scrape_doge()
     new_contract_df = pd.concat([pre_contract_df,contract_df])[contract_df.columns].drop_duplicates(keep=False)
     new_property_df = pd.concat([pre_property_df,property_df])[property_df.columns].drop_duplicates(keep=False)
     new_contract_df = extend_contract_data(new_contract_df)
+    new_contract_df['datetime_scrape'] = datetime_scrape
     new_property_df = process_prop_data(new_property_df)
+    new_property_df['datetime_scrape'] = datetime_scrape
     contract_df = pd.concat([pre_contract_df,new_contract_df])
     property_df = pd.concat([pre_property_df,new_property_df])
     return contract_df, property_df
