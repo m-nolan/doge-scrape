@@ -60,6 +60,8 @@ def scrape_doge():
     data_json = r.json()
     contract_df = pd.DataFrame(data_json['contracts'])
     property_df = pd.DataFrame(data_json['leases'])
+    property_df['sq_ft'] = [float(str(a).replace(',','')) if a is not None else None for a in property_df['sq_ft']]
+    property_df['value'] = property_df['value'].astype(float)
     return contract_df, property_df
 
 def parse_fpds_html(fpds_soup):
@@ -94,7 +96,6 @@ def clean_loc_str(loc):
 
 def process_prop_data(property_df):
     property_df['city'], property_df['state'] = zip(*[clean_loc_str(loc) for loc in property_df['location']])
-    property_df['sq_ft'] = [float(str(a).replace(',','')) if a is not None else None for a in property_df['sq_ft']]
     return property_df
 
 def save_doge_data(contract_df,property_df):
@@ -113,7 +114,7 @@ def update_doge_data():
     new_property_df = process_prop_data(new_property_df)
     new_property_df['datetime_scrape'] = datetime_scrape
     contract_df = pd.concat([pre_contract_df,new_contract_df])
-    property_df = pd.concat([pre_property_df,new_property_df])
+    # property_df = pd.concat([pre_property_df,new_property_df])
     return contract_df, property_df
 
 def main():
