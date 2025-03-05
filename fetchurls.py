@@ -1,7 +1,7 @@
 import requests
 from tqdm import tqdm
 
-# import asyncio
+import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, parse_qs
 import os
@@ -20,7 +20,7 @@ async def fetch_a_file(url, basefilename):
         else:
             with open(contractdir + basefilename, "wb") as outfile:
                 outfile.write(r.content)
-            print("+")
+            # print("+")
             return
 
 
@@ -63,12 +63,13 @@ if __name__ == "__main__":
             
     print(f"{len(needed_dict)} URLs needed to be downloaded")
 
-    # for url in needed_dict:
-        # basefilename = needed_dict[url]
-        # asyncio.run(fetch_a_file(url, basefilename))
+    for url in tqdm(needed_dict):
+        basefilename = needed_dict[url]
+        asyncio.run(fetch_a_file(url, basefilename))
 
-
+beer = """
     with ThreadPoolExecutor(max_workers=max_workers) as e:
         for url in tqdm(needed_dict):
             basefilename = needed_dict[url]
             e.submit(concurrent_fetch_a_file(url, basefilename))
+"""
