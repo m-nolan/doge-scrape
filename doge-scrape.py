@@ -6,7 +6,8 @@ import validators
 from bs4 import BeautifulSoup
 from datetime import datetime
 from selenium.common import NoSuchElementException
-from selenium.webdriver import Chrome, ChromeOptions
+from selenium.webdriver import Firefox
+from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from time import sleep
 from tqdm import tqdm
@@ -62,9 +63,9 @@ def load_pre_data():
     return pre_contract_df, pre_grant_df, pre_property_df
 
 def configure_driver():
-    op = ChromeOptions()
-    op.add_argument('--headless=new')
-    return Chrome(options=op)
+    op = Options()
+    op.add_argument('-headless')
+    return Firefox(options=op)
 
 def open_tables(driver):
     buttons = driver.find_elements(By.XPATH,"//*[contains(text(), 'View All ')]")
