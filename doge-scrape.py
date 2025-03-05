@@ -5,7 +5,6 @@ import validators
 
 from bs4 import BeautifulSoup
 from datetime import datetime
-from selenium.common import NoSuchElementException
 from selenium.webdriver import Firefox
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
