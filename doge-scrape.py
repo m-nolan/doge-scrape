@@ -1,3 +1,4 @@
+import io
 import os
 import pandas as pd
 import requests as req
@@ -77,13 +78,13 @@ def scrape_doge(driver):
     sleep(2)
     driver = open_tables(driver)
     table_list = driver.find_elements(By.XPATH,"//table")
-    contract_df = pd.read_html(table_list[0].get_attribute('outerHTML'))[0]
+    contract_df = pd.read_html(io.StringIO(table_list[0].get_attribute('outerHTML')))[0]
     link_cell_list = table_list[0].find_elements(By.XPATH,".//tr/td[4]")
     for idx, lc in enumerate(link_cell_list):
         ac = lc.find_elements(By.TAG_NAME,'a')
         contract_df.loc[idx,'Link'] = None if len(ac) == 0 else ac[0].get_attribute('href')
-    grant_df = pd.read_html(table_list[1].get_attribute('outerHTML'))[0]
-    property_df = pd.read_html(table_list[2].get_attribute('outerHTML'))[0]
+    grant_df = pd.read_html(io.StringIO(table_list[1].get_attribute('outerHTML')))[0]
+    property_df = pd.read_html(io.StringIO(table_list[2].get_attribute('outerHTML')))[0]
     return contract_df, grant_df, property_df
 
 def dollar_str_to_float(dstr):
@@ -134,8 +135,6 @@ def parse_fpds_html(fpds_soup):
     return data_dict
 
 def extend_contract_data(contract_df):
-    # lots of extra information on the fpds page. Takes a few seconds per item,
-    # so this should be rewritten to avoid re-scraping.
     data_dict_list = []
     rh = req.utils.default_headers()
     # this takes about 2s per iteration. Speedup without DOSing the FPDS server?
@@ -148,7 +147,6 @@ def extend_contract_data(contract_df):
     return pd.concat([contract_df.reset_index().drop('index',axis=1),pd.DataFrame(data_dict_list)],axis=1)
 
 def save_doge_data(contract_df,grant_df,property_df):
-    # dtime_str = datetime.strftime(datetime.now(),'%Y%m%d%H%M%S')
     contract_df.to_csv(f'./data/doge-contract.csv',index=False)
     grant_df.to_csv(f'./data/doge-grant.csv',index=False)
     property_df.to_csv(f'./data/doge-property.csv',index=False)
