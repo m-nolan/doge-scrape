@@ -1,15 +1,15 @@
 import io
 import os
+from datetime import datetime
+from time import sleep
+
 import pandas as pd
 import requests as req
 import validators
-
 from bs4 import BeautifulSoup
-from datetime import datetime
 from selenium.webdriver import Firefox
-from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
-from time import sleep
+from selenium.webdriver.firefox.options import Options
 from tqdm import tqdm
 
 data_key_dict = { # match on the 'id' field
