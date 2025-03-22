@@ -159,6 +159,7 @@ def update_doge_data():
     pre_contract_df, pre_grant_df, pre_property_df = load_pre_data()
     print('scraping new data...')
     stub_contract_df, stub_grant_df, stub_property_df = scrape_doge(driver)
+    driver.quit()
     stub_contract_df, stub_grant_df, stub_property_df = [clean_stub_df(df) for df in [stub_contract_df, stub_grant_df, stub_property_df]]
     new_contract_df, new_grant_df, new_property_df = [
         df_row_diff(pre_df,stub_df) for pre_df, stub_df in zip(
