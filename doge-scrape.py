@@ -162,7 +162,6 @@ def extend_contract_data(contract_df):
             fpds_df = pd.concat([fpds_df,pd.DataFrame(contract_row_dict,index=[0])],ignore_index=True)
         else:
             fpds_df = pd.concat([fpds_df,pd.DataFrame([],index=[0])],ignore_index=True)
-            fpds_df.append
     return pd.concat([contract_df.reset_index().drop('index',axis=1),fpds_df],axis=1)
 
 def extend_grant_data(grant_df):
