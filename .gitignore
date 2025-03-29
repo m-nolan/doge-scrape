@@ -1,4 +1,4 @@
 *.ipynb
 *stub*
 venv
-
+.DS_Store

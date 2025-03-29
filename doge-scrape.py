@@ -7,11 +7,14 @@ import pandas as pd
 import requests as req
 import validators
 from bs4 import BeautifulSoup
+from ratelimit import limits
 from selenium.webdriver import Firefox
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from tqdm import tqdm
 
+N_REQ = 10
+LIMIT_S = 36    # 1000 reqs per hour, or 10 reqs per 36s.
 data_key_dict = { # match on the 'id' field
     'award_agency': 'agencyID',
     'award_procurement_id': 'PIID',
@@ -62,6 +65,15 @@ def load_pre_data():
     pre_property_df = safe_load_csv('./data/doge-property.csv')
     return pre_contract_df, pre_grant_df, pre_property_df
 
+# data.gov apis have a req limit of 1000 per hour. This spreads that out to 10/36s.
+# most reqs take ~2s, so this isn't that bad anywho.
+@limits(calls=N_REQ,period=LIMIT_S)
+def limit_req(url,headers={}):
+    r = req.get(url,headers=headers)
+    if r.status_code != 200:
+        raise Exception('API response: {}'.format(r.status_code))
+    return r
+
 def configure_driver():
     op = Options()
     op.add_argument('-headless')
@@ -72,19 +84,28 @@ def open_tables(driver):
     [b.click() for b in buttons]
     return driver
 
-def scrape_doge(driver):
-    doge_data_url = 'https://doge.gov/savings'
-    driver.get(doge_data_url)
-    sleep(2)
-    driver = open_tables(driver)
-    table_list = driver.find_elements(By.XPATH,"//table")
-    contract_df = pd.read_html(io.StringIO(table_list[0].get_attribute('outerHTML')))[0]
-    link_cell_list = table_list[0].find_elements(By.XPATH,".//tr/td[4]")
-    for idx, lc in enumerate(link_cell_list):
-        ac = lc.find_elements(By.TAG_NAME,'a')
-        contract_df.loc[idx,'Link'] = None if len(ac) == 0 else ac[0].get_attribute('href')
-    grant_df = pd.read_html(io.StringIO(table_list[1].get_attribute('outerHTML')))[0]
-    property_df = pd.read_html(io.StringIO(table_list[2].get_attribute('outerHTML')))[0]
+def scrape_doge_endpoint(api_root,endpoint_str,params):
+    endpoint_json_list = []
+    p_scrape = True
+    page = 1
+    while p_scrape:
+        r = req.get(os.path.join(api_root,endpoint_str),params={**params,"page":page})
+        _json_list = r.json()['result'][endpoint_str]
+        p_scrape = page < r.json()['meta']['pages']
+        endpoint_json_list.extend(_json_list)
+        page += 1
+    return pd.DataFrame(endpoint_json_list)
+
+def scrape_doge():
+    api_root = 'https://api.doge.gov/savings/'
+    params = {
+        "sort_by": "date",
+        "sort_order": "desc",
+        "per_page": 500
+    }
+    contract_df = scrape_doge_endpoint(api_root,'contracts',params)
+    grant_df = scrape_doge_endpoint(api_root,'grants',params)
+    property_df = scrape_doge_endpoint(api_root,'leases',params)
     return contract_df, grant_df, property_df
 
 def dollar_str_to_float(dstr):
@@ -106,10 +127,6 @@ def df_row_diff(old_df,new_df):
 def clean_stub_df(df):
     df.columns = [k.lower().replace(' ','_') for k in df.keys()]
     # in-column value replacement
-    if 'value' in df.keys():
-        df['value'] = [dollar_str_to_float(ds) for ds in df['value'].values]
-    if 'annual_lease' in df.keys():
-        df['annual_lease'] = [dollar_str_to_float(ds) for ds in df['annual_lease'].values]
     if 'uploaded_on' in df.keys():
         df['uploaded_dt'] = [safe_to_dt(dts) for dts in df['uploaded_on'].values]
     # column splitting and replacement
@@ -135,16 +152,32 @@ def parse_fpds_html(fpds_soup):
     return data_dict
 
 def extend_contract_data(contract_df):
-    data_dict_list = []
+    fpds_df = pd.DataFrame([])
     rh = req.utils.default_headers()
     # this takes about 2s per iteration. Speedup without DOSing the FPDS server?
-    for fpds_link in tqdm(contract_df.link.values):
+    for fpds_link in tqdm(contract_df.fpds_link.values):
         if validators.url(fpds_link):
             r = req.get(fpds_link,headers=rh)
-            data_dict_list.append(parse_fpds_html(BeautifulSoup(r.content,features="lxml")))
+            contract_row_dict = parse_fpds_html(BeautifulSoup(r.content,features="lxml"))
+            fpds_df = pd.concat([fpds_df,pd.DataFrame(contract_row_dict,index=[0])],ignore_index=True)
         else:
-            data_dict_list.append({k: None for k, _ in data_key_dict.items()})
-    return pd.concat([contract_df.reset_index().drop('index',axis=1),pd.DataFrame(data_dict_list)],axis=1)
+            fpds_df = pd.concat([fpds_df,pd.DataFrame([],index=[0])],ignore_index=True)
+            fpds_df.append
+    return pd.concat([contract_df.reset_index().drop('index',axis=1),fpds_df],axis=1)
+
+def extend_grant_data(grant_df):
+    api_root = 'https://api.usaspending.gov/api/v2/awards/'
+    usas_df = pd.DataFrame([])
+    rh = req.utils.default_headers()
+    for link in tqdm(grant_df.link.values):
+        if validators.url(link):
+            grant_id = os.path.basename(link)
+            r = limit_req(os.path.join(api_root,grant_id),headers=rh)
+            grant_row_df = pd.json_normalize(r.json(),sep='_')
+            usas_df = pd.concat([usas_df,grant_row_df],ignore_index=True)
+        else:
+            usas_df = pd.concat([usas_df,pd.DataFrame([],index=[0])],ignore_index=True)
+    return pd.concat([grant_df.reset_index().drop('index',axis=1),usas_df],axis=1)
 
 def save_doge_data(contract_df,grant_df,property_df):
     contract_df.to_csv(f'./data/doge-contract.csv',index=False)
@@ -153,13 +186,10 @@ def save_doge_data(contract_df,grant_df,property_df):
 
 def update_doge_data():
     datetime_scrape = datetime.strftime(datetime.now(),'%Y-%m-%d-%H%M')
-    print('configuring headless chrome driver...')
-    driver = configure_driver()
     print('loading current data...')
     pre_contract_df, pre_grant_df, pre_property_df = load_pre_data()
     print('scraping new data...')
-    stub_contract_df, stub_grant_df, stub_property_df = scrape_doge(driver)
-    driver.quit()
+    stub_contract_df, stub_grant_df, stub_property_df = scrape_doge()
     stub_contract_df, stub_grant_df, stub_property_df = [clean_stub_df(df) for df in [stub_contract_df, stub_grant_df, stub_property_df]]
     new_contract_df, new_grant_df, new_property_df = [
         df_row_diff(pre_df,stub_df) for pre_df, stub_df in zip(
@@ -168,6 +198,8 @@ def update_doge_data():
     ]
     print('extending contract table with FPDS data...')
     new_contract_df = extend_contract_data(new_contract_df)
+    print('extending grant table with USASpending data...')
+    new_grant_df = extend_grant_data(new_grant_df)
     new_contract_df['dt_scrape'] = datetime_scrape
     new_grant_df['dt_scrape'] = datetime_scrape
     new_property_df['dt_scrape'] = datetime_scrape
