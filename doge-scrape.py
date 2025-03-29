@@ -67,6 +67,7 @@ def load_pre_data():
 
 # data.gov apis have a req limit of 1000 per hour. This spreads that out to 10/36s.
 # most reqs take ~2s, so this isn't that bad anywho.
+@sleep_and_retry
 @limits(calls=N_REQ,period=LIMIT_S)
 def limit_req(url,headers={}):
     r = req.get(url,headers=headers)
