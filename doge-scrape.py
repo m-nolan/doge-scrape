@@ -7,7 +7,7 @@ import pandas as pd
 import requests as req
 import validators
 from bs4 import BeautifulSoup
-from ratelimit import limits
+from ratelimit import limits, sleep_and_retry
 from selenium.webdriver import Firefox
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
