@@ -7,7 +7,7 @@ import pandas as pd
 import requests as req
 import validators
 from bs4 import BeautifulSoup
-from ratelimit import limits
+from ratelimit import limits, sleep_and_retry
 from selenium.webdriver import Firefox
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
@@ -67,6 +67,7 @@ def load_pre_data():
 
 # data.gov apis have a req limit of 1000 per hour. This spreads that out to 10/36s.
 # most reqs take ~2s, so this isn't that bad anywho.
+@sleep_and_retry
 @limits(calls=N_REQ,period=LIMIT_S)
 def limit_req(url,headers={}):
     r = req.get(url,headers=headers)
@@ -162,14 +163,13 @@ def extend_contract_data(contract_df):
             fpds_df = pd.concat([fpds_df,pd.DataFrame(contract_row_dict,index=[0])],ignore_index=True)
         else:
             fpds_df = pd.concat([fpds_df,pd.DataFrame([],index=[0])],ignore_index=True)
-            fpds_df.append
     return pd.concat([contract_df.reset_index().drop('index',axis=1),fpds_df],axis=1)
 
 def extend_grant_data(grant_df):
     api_root = 'https://api.usaspending.gov/api/v2/awards/'
     usas_df = pd.DataFrame([])
     rh = req.utils.default_headers()
-    for link in tqdm(grant_df.link.values):
+    for link in tqdm(grant_df.link.values[:20]):
         if validators.url(link):
             grant_id = os.path.basename(link)
             r = limit_req(os.path.join(api_root,grant_id),headers=rh)
@@ -197,7 +197,7 @@ def update_doge_data():
         )
     ]
     print('extending contract table with FPDS data...')
-    new_contract_df = extend_contract_data(new_contract_df)
+    # new_contract_df = extend_contract_data(new_contract_df)
     print('extending grant table with USASpending data...')
     new_grant_df = extend_grant_data(new_grant_df)
     new_contract_df['dt_scrape'] = datetime_scrape
