@@ -152,7 +152,11 @@ def parse_fpds_html(fpds_soup):
     data_dict['requirement_desc'] = None if req_desc_element is None else req_desc_element.get('text',default=None)
     return data_dict
 
-def extend_contract_data(contract_df):
+def log_row_error(mode,dt,req_url):
+    with open(f"./runlog/scrape-{dt}.txt",'a') as lwf:
+        print(f"{mode},{dt},{req_url}",file=lwf)
+
+def extend_contract_data(contract_df,dt):
     fpds_df = pd.DataFrame([])
     rh = req.utils.default_headers()
     # this takes about 2s per iteration. Speedup without DOSing the FPDS server?
@@ -163,12 +167,13 @@ def extend_contract_data(contract_df):
                 contract_row_dict = parse_fpds_html(BeautifulSoup(r.content,features="lxml"))
                 fpds_df = pd.concat([fpds_df,pd.DataFrame(contract_row_dict,index=[0])],ignore_index=True)
             except:
+                log_row_error('contract',dt,fpds_link)
                 fpds_df = pd.concat([fpds_df,pd.DataFrame([],index=[0])],ignore_index=True)
         else:
             fpds_df = pd.concat([fpds_df,pd.DataFrame([],index=[0])],ignore_index=True)
     return pd.concat([contract_df.reset_index().drop('index',axis=1),fpds_df],axis=1)
 
-def extend_grant_data(grant_df):
+def extend_grant_data(grant_df,dt):
     api_root = 'https://api.usaspending.gov/api/v2/awards/'
     usas_df = pd.DataFrame([])
     rh = req.utils.default_headers()
@@ -176,10 +181,12 @@ def extend_grant_data(grant_df):
         if validators.url(link):
             try:
                 grant_id = os.path.basename(link)
-                r = limit_req(os.path.join(api_root,grant_id),headers=rh)
+                usas_req_url = os.path.join(api_root,grant_id)
+                r = limit_req(usas_req_url,headers=rh)
                 grant_row_df = pd.json_normalize(r.json(),sep='_')
                 usas_df = pd.concat([usas_df,grant_row_df],ignore_index=True)
             except:
+                log_row_error('grant',dt,usas_req_url)
                 usas_df = pd.concat([usas_df,pd.DataFrame([],index=[0])],ignore_index=True)
         else:
             usas_df = pd.concat([usas_df,pd.DataFrame([],index=[0])],ignore_index=True)
@@ -203,11 +210,11 @@ def update_doge_data():
         )
     ]
     print('extending contract table with FPDS data...')
-    new_contract_df = extend_contract_data(new_contract_df)
+    new_contract_df = extend_contract_data(new_contract_df,datetime_scrape)
     new_contract_df['dt_scrape'] = datetime_scrape
     contract_df = pd.concat([pre_contract_df,new_contract_df])
     print('extending grant table with USASpending data...')
-    new_grant_df = extend_grant_data(new_grant_df)
+    new_grant_df = extend_grant_data(new_grant_df,datetime_scrape)
     new_grant_df['dt_scrape'] = datetime_scrape
     grant_df = pd.concat([pre_grant_df,new_grant_df])
     new_property_df['dt_scrape'] = datetime_scrape
