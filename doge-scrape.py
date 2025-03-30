@@ -198,13 +198,13 @@ def update_doge_data():
     ]
     print('extending contract table with FPDS data...')
     new_contract_df = extend_contract_data(new_contract_df)
+    new_contract_df['dt_scrape'] = datetime_scrape
+    contract_df = pd.concat([pre_contract_df,new_contract_df])
     print('extending grant table with USASpending data...')
     new_grant_df = extend_grant_data(new_grant_df)
-    new_contract_df['dt_scrape'] = datetime_scrape
     new_grant_df['dt_scrape'] = datetime_scrape
-    new_property_df['dt_scrape'] = datetime_scrape
-    contract_df = pd.concat([pre_contract_df,new_contract_df])
     grant_df = pd.concat([pre_grant_df,new_grant_df])
+    new_property_df['dt_scrape'] = datetime_scrape
     property_df = pd.concat([pre_property_df,new_property_df])
     return contract_df, grant_df, property_df
 
