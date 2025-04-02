@@ -5,4 +5,4 @@ requests
 selenium
 tqdm>=4.65
 validators>=0.34
-
+ratelimit>=2.2
