@@ -3,3 +3,4 @@
 venv
 .DS_Store
 runlog
+data/*.pickle
