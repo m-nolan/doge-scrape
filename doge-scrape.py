@@ -153,6 +153,8 @@ def parse_fpds_html(fpds_soup):
     return data_dict
 
 def log_row_error(mode,dt,req_url):
+    if not os.path.exists("./runlog"):
+        os.makedirs("./runlog")
     with open(f"./runlog/scrape-{dt}.txt",'a') as lwf:
         print(f"{mode},{dt},{req_url}",file=lwf)
 
@@ -209,14 +211,17 @@ def update_doge_data():
             [pre_contract_df,pre_grant_df,pre_property_df],[stub_contract_df, stub_grant_df, stub_property_df]
         )
     ]
-    print('extending contract table with FPDS data...')
-    new_contract_df = extend_contract_data(new_contract_df,datetime_scrape)
-    new_contract_df['dt_scrape'] = datetime_scrape
-    contract_df = pd.concat([pre_contract_df,new_contract_df],ignore_index=True)
+    # print('extending contract table with FPDS data...')
+    # new_contract_df = extend_contract_data(new_contract_df,datetime_scrape)
+    # new_contract_df['dt_scrape'] = datetime_scrape
+    # contract_df = pd.concat([pre_contract_df,new_contract_df],ignore_index=True)
     print('extending grant table with USASpending data...')
     new_grant_df = extend_grant_data(new_grant_df,datetime_scrape)
     new_grant_df['dt_scrape'] = datetime_scrape
-    grant_df = pd.concat([pre_grant_df,new_grant_df],ignore_index=True)
+    try:
+        grant_df = pd.concat([pre_grant_df,new_grant_df],ignore_index=True)
+    except:
+        breakpoint()
     new_property_df['dt_scrape'] = datetime_scrape
     property_df = pd.concat([pre_property_df,new_property_df],ignore_index=True)
     return contract_df, grant_df, property_df
