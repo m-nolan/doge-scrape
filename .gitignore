@@ -2,3 +2,5 @@
 *stub*
 venv
 .DS_Store
+data/*.pickle
+
