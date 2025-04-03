@@ -14,7 +14,7 @@ from selenium.webdriver.firefox.options import Options
 from tqdm import tqdm
 
 N_REQ = 10
-LIMIT_S = 36    # 1000 reqs per hour, or 10 reqs per 36s.
+LIMIT_S = 45    # 800 reqs per hour, or 10 reqs per 45s.
 data_key_dict = { # match on the 'id' field
     'award_agency': 'agencyID',
     'award_procurement_id': 'PIID',
@@ -179,6 +179,7 @@ def extend_grant_data(grant_df,dt):
     api_root = 'https://api.usaspending.gov/api/v2/awards/'
     usas_df = pd.DataFrame([])
     rh = req.utils.default_headers()
+    grant_df = grant_df.rename(columns={'description': 'description_doge'})
     for link in tqdm(grant_df.link.values):
         if validators.url(link):
             try:
@@ -186,6 +187,7 @@ def extend_grant_data(grant_df,dt):
                 usas_req_url = os.path.join(api_root,grant_id)
                 r = limit_req(usas_req_url,headers=rh)
                 grant_row_df = pd.json_normalize(r.json(),sep='_')
+                grant_row_df = grant_row_df.rename(columns={'description': 'description_usas'})
                 usas_df = pd.concat([usas_df,grant_row_df],ignore_index=True)
             except:
                 log_row_error('grant',dt,usas_req_url)
@@ -211,10 +213,10 @@ def update_doge_data():
             [pre_contract_df,pre_grant_df,pre_property_df],[stub_contract_df, stub_grant_df, stub_property_df]
         )
     ]
-    # print('extending contract table with FPDS data...')
-    # new_contract_df = extend_contract_data(new_contract_df,datetime_scrape)
-    # new_contract_df['dt_scrape'] = datetime_scrape
-    # contract_df = pd.concat([pre_contract_df,new_contract_df],ignore_index=True)
+    print('extending contract table with FPDS data...')
+    new_contract_df = extend_contract_data(new_contract_df,datetime_scrape)
+    new_contract_df['dt_scrape'] = datetime_scrape
+    contract_df = pd.concat([pre_contract_df,new_contract_df],ignore_index=True)
     print('extending grant table with USASpending data...')
     new_grant_df = extend_grant_data(new_grant_df,datetime_scrape)
     new_grant_df['dt_scrape'] = datetime_scrape
