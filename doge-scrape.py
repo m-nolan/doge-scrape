@@ -51,6 +51,14 @@ data_key_dict = { # match on the 'id' field
     'product_service_desc': 'productOrServiceCodeDescription',
     'principal_naics_code': 'principalNAICSCode',
     'principal_naics_desc': 'NAICSCodeDescription',
+    'performance_state': 'placeStateCode',
+    'performance_location': 'placeLocationCode',
+    'performance_country': 'placeCountryCode',
+    'performance_county': 'principalPlaceOfPerformanceCountyName',
+    'performance_city': 'principalPlaceOfPerformanceName',
+    'performance_congressional_district': 'principalPlaceOfPerformanceCongressionalDistrict',
+    'performance_zip': 'placeOfPerformanceZIPCode',
+    'performance_zip_ext': 'placeOfPerformanceZIPCode4',
 }
 
 def safe_load_csv(filepath):
