@@ -14,7 +14,7 @@ from selenium.webdriver.firefox.options import Options
 from tqdm import tqdm
 
 N_REQ = 10
-LIMIT_S = 45    # 800 reqs per hour, or 10 reqs per 45s.
+LIMIT_S = 3    # 1000 reqs per 300s, or 10 reqs per 3s. Pretty lenient!
 data_key_dict = { # match on the 'id' field
     'award_agency': 'agencyID',
     'award_procurement_id': 'PIID',
@@ -147,6 +147,7 @@ def clean_stub_df(df):
             df.loc[idx,'state'] = loc_part_tup[1] if city_pred else None
             if len(loc_part_tup) > 2:
                 df.loc[idx,'agency'] = loc_part_tup[2] if city_pred else loc_part_tup[1]
+    df = df.rename(columns={'description': 'description_doge'})
     return df
 
 def parse_fpds_html(fpds_soup):
@@ -187,7 +188,6 @@ def extend_grant_data(grant_df,dt):
     api_root = 'https://api.usaspending.gov/api/v2/awards/'
     usas_df = pd.DataFrame([])
     rh = req.utils.default_headers()
-    grant_df = grant_df.rename(columns={'description': 'description_doge'})
     for link in tqdm(grant_df.link.values):
         if validators.url(link):
             try:
