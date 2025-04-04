@@ -103,7 +103,9 @@ def scrape_doge_endpoint(api_root,endpoint_str,params):
         p_scrape = page < r.json()['meta']['pages']
         endpoint_json_list.extend(_json_list)
         page += 1
-    return pd.DataFrame(endpoint_json_list)
+    df = pd.DataFrame(endpoint_json_list)
+    df = df.rename(columns={'description': 'description_doge'})
+    return df
 
 def scrape_doge():
     api_root = 'https://api.doge.gov/savings/'
@@ -147,7 +149,6 @@ def clean_stub_df(df):
             df.loc[idx,'state'] = loc_part_tup[1] if city_pred else None
             if len(loc_part_tup) > 2:
                 df.loc[idx,'agency'] = loc_part_tup[2] if city_pred else loc_part_tup[1]
-    df = df.rename(columns={'description': 'description_doge'})
     return df
 
 def parse_fpds_html(fpds_soup):
@@ -215,6 +216,7 @@ def update_doge_data():
     pre_contract_df, pre_grant_df, pre_property_df = load_pre_data()
     print('scraping new data...')
     stub_contract_df, stub_grant_df, stub_property_df = scrape_doge()
+    breakpoint()
     stub_contract_df, stub_grant_df, stub_property_df = [clean_stub_df(df) for df in [stub_contract_df, stub_grant_df, stub_property_df]]
     new_contract_df, new_grant_df, new_property_df = [
         df_row_diff(pre_df,stub_df) for pre_df, stub_df in zip(
