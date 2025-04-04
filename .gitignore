@@ -6,4 +6,5 @@ runlog
 data/*.pickle
 .old
  __pycache__/
-
+stucka*
+*.pickle
