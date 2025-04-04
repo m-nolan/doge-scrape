@@ -4,3 +4,7 @@ venv
 .DS_Store
 runlog
 data/*.pickle
+.old
+ __pycache__/
+stucka*
+*.pickle
