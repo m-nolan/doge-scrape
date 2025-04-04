@@ -135,6 +135,13 @@ def safe_to_dt(dtstr):
 def df_row_diff(old_df,new_df):
     return pd.concat([old_df,new_df])[new_df.columns].drop_duplicates(keep=False)
 
+def df_row_diff_2(old_df,stub_df):
+    new_df = stub_df.copy()
+    for idx, row in new_df.iterrows():  # there HAS to be a way to vectorize this...
+        if (old_df[stub_df.columns] == row).all(axis=1).any():
+            new_df = new_df.drop(idx,axis=0)
+    return new_df
+
 def clean_stub_df(df):
     df.columns = [k.lower().replace(' ','_') for k in df.keys()]
     # in-column value replacement
@@ -216,10 +223,10 @@ def update_doge_data():
     pre_contract_df, pre_grant_df, pre_property_df = load_pre_data()
     print('scraping new data...')
     stub_contract_df, stub_grant_df, stub_property_df = scrape_doge()
-    breakpoint()
     stub_contract_df, stub_grant_df, stub_property_df = [clean_stub_df(df) for df in [stub_contract_df, stub_grant_df, stub_property_df]]
+    print('finding new and changed entries...')
     new_contract_df, new_grant_df, new_property_df = [
-        df_row_diff(pre_df,stub_df) for pre_df, stub_df in zip(
+        df_row_diff_2(pre_df,stub_df) for pre_df, stub_df in zip(
             [pre_contract_df,pre_grant_df,pre_property_df],[stub_contract_df, stub_grant_df, stub_property_df]
         )
     ]
@@ -230,10 +237,7 @@ def update_doge_data():
     print('extending grant table with USASpending data...')
     new_grant_df = extend_grant_data(new_grant_df,datetime_scrape)
     new_grant_df['dt_scrape'] = datetime_scrape
-    try:
-        grant_df = pd.concat([pre_grant_df,new_grant_df],ignore_index=True)
-    except:
-        breakpoint()
+    grant_df = pd.concat([pre_grant_df,new_grant_df],ignore_index=True)
     new_property_df['dt_scrape'] = datetime_scrape
     property_df = pd.concat([pre_property_df,new_property_df],ignore_index=True)
     return contract_df, grant_df, property_df
