@@ -137,7 +137,7 @@ def df_row_diff(old_df,new_df):
 
 def df_row_diff_2(old_df,stub_df):
     new_df = stub_df.copy()
-    for idx, row in new_df.iterrows():  # there HAS to be a way to vectorize this...
+    for idx, row in tqdm(new_df.iterrows()):  # there HAS to be a way to vectorize this...
         if (old_df[stub_df.columns] == row).all(axis=1).any():
             new_df = new_df.drop(idx,axis=0)
     return new_df
