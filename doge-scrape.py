@@ -67,14 +67,19 @@ def safe_load_csv(filepath):
         df['uploaded_dt'] = pd.to_datetime(df['uploaded_dt'])
     return df
 
+def clean_pre_df(df):
+    df = df.fillna('')
+    return df
+
 def load_pre_data():
     pre_contract_df = safe_load_csv('./data/doge-contract.csv')
+    pre_contract_df = clean_pre_df(pre_contract_df)
     pre_grant_df = safe_load_csv('./data/doge-grant.csv')
+    pre_grant_df = clean_pre_df(pre_grant_df)
     pre_property_df = safe_load_csv('./data/doge-property.csv')
+    pre_property_df = clean_pre_df(pre_property_df)
     return pre_contract_df, pre_grant_df, pre_property_df
 
-# data.gov apis have a req limit of 1000 per hour. This spreads that out to 10/36s.
-# most reqs take ~2s, so this isn't that bad anywho.
 @sleep_and_retry
 @limits(calls=N_REQ,period=LIMIT_S)
 def limit_req(url,headers={}):
@@ -153,9 +158,13 @@ def clean_stub_df(df):
         for idx, loc_part_tup in enumerate(loc_part_list):
             city_pred = len(loc_part_tup[1]) == 2
             df.loc[idx,'city'] = loc_part_tup[0]    # city always first
-            df.loc[idx,'state'] = loc_part_tup[1] if city_pred else None
+            df.loc[idx,'state'] = loc_part_tup[1] if city_pred else ''
             if len(loc_part_tup) > 2:
                 df.loc[idx,'agency'] = loc_part_tup[2] if city_pred else loc_part_tup[1]
+    if 'link' in df.keys():
+        df.link = df.link.fillna('')
+    if 'vendor' in df.keys():
+        df[df.vendor == 'N/A','vendor'] = ''
     return df
 
 def parse_fpds_html(fpds_soup):
