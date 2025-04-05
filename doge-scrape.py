@@ -164,7 +164,7 @@ def clean_stub_df(df):
     if 'link' in df.keys():
         df.link = df.link.fillna('')
     if 'vendor' in df.keys():
-        df[df.vendor == 'N/A','vendor'] = ''
+        df.loc[df.vendor == 'N/A','vendor'] = ''
     return df
 
 def parse_fpds_html(fpds_soup):
