@@ -1,8 +1,8 @@
-import io
 import os
 from datetime import datetime
 from time import sleep
 
+import numpy as np
 import pandas as pd
 import requests as req
 import validators
@@ -142,10 +142,13 @@ def df_row_diff(old_df,new_df):
 
 def df_row_diff_2(old_df,stub_df):
     new_df = stub_df.copy()
+    drop_idx = []
     for idx, row in tqdm(new_df.iterrows()):  # there HAS to be a way to vectorize this...
-        if (old_df[stub_df.columns] == row).all(axis=1).any():
+        match_series = (old_df[stub_df.columns] == row).all(axis=1)
+        if match_series.any():
+            drop_idx.append(np.arange(len(match_series))[match_series])
             new_df = new_df.drop(idx,axis=0)
-    return new_df
+    return new_df, drop_idx
 
 def clean_stub_df(df):
     df.columns = [k.lower().replace(' ','_') for k in df.keys()]
@@ -221,10 +224,13 @@ def extend_grant_data(grant_df,dt):
             usas_df = pd.concat([usas_df,pd.DataFrame([],index=[0])],ignore_index=True)
     return pd.concat([grant_df.reset_index().drop('index',axis=1),usas_df],axis=1)
 
-def save_doge_data(contract_df,grant_df,property_df):
-    contract_df.to_csv(f'./data/doge-contract.csv',index=False)
-    grant_df.to_csv(f'./data/doge-grant.csv',index=False)
-    property_df.to_csv(f'./data/doge-property.csv',index=False)
+def save_doge_data(contract_df, grant_df, property_df, stub_contract_df, stub_grant_df, stub_property_df):
+    contract_df.to_csv('./data/doge-contract.csv',index=False)
+    grant_df.to_csv('./data/doge-grant.csv',index=False)
+    property_df.to_csv('./data/doge-property.csv',index=False)
+    stub_contract_df.to_csv('./data/doge-contract-stub.csv',index=False)
+    stub_grant_df.to_csv('./data/doge-grant-stub.csv',index=False)
+    stub_property_df.to_csv('./data/doge-property-stub.csv',index=False)
 
 def update_doge_data():
     datetime_scrape = datetime.strftime(datetime.now(),'%Y-%m-%d-%H%M')
@@ -234,11 +240,11 @@ def update_doge_data():
     stub_contract_df, stub_grant_df, stub_property_df = scrape_doge()
     stub_contract_df, stub_grant_df, stub_property_df = [clean_stub_df(df) for df in [stub_contract_df, stub_grant_df, stub_property_df]]
     print('finding new and changed entries...')
-    new_contract_df, new_grant_df, new_property_df = [
+    (new_contract_df, contract_drop_idx), (new_grant_df, grant_drop_idx), (new_property_df, property_drop_idx) = [
         df_row_diff_2(pre_df,stub_df) for pre_df, stub_df in zip(
             [pre_contract_df,pre_grant_df,pre_property_df],[stub_contract_df, stub_grant_df, stub_property_df]
         )
-    ]
+    ] # dropped idx values are for debugging and tracking erroneously ejected "duplicate" entries.
     print('extending contract table with FPDS data...')
     new_contract_df = extend_contract_data(new_contract_df,datetime_scrape)
     new_contract_df['dt_scrape'] = datetime_scrape
@@ -249,11 +255,11 @@ def update_doge_data():
     grant_df = pd.concat([pre_grant_df,new_grant_df],ignore_index=True)
     new_property_df['dt_scrape'] = datetime_scrape
     property_df = pd.concat([pre_property_df,new_property_df],ignore_index=True)
-    return contract_df, grant_df, property_df
+    return contract_df, grant_df, property_df, stub_contract_df, stub_grant_df, stub_property_df
 
 def main():
-    contract_df, grant_df, property_df = update_doge_data()
-    save_doge_data(contract_df,grant_df,property_df)
+    contract_df, grant_df, property_df, stub_contract_df, stub_grant_df, stub_property_df = update_doge_data()
+    save_doge_data(contract_df, grant_df, property_df, stub_contract_df, stub_grant_df, stub_property_df)
 
 if __name__ == '__main__':
     main()
